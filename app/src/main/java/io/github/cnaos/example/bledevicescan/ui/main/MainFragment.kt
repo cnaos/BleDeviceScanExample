@@ -1,12 +1,12 @@
 package io.github.cnaos.example.bledevicescan.ui.main
 
-import androidx.lifecycle.ViewModelProviders
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import io.github.cnaos.example.bledevicescan.R
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import io.github.cnaos.example.bledevicescan.databinding.MainFragmentBinding
 
 class MainFragment : Fragment() {
 
@@ -14,19 +14,27 @@ class MainFragment : Fragment() {
         fun newInstance() = MainFragment()
     }
 
-    private lateinit var viewModel: MainViewModel
+    private val viewModel: MainViewModel by activityViewModels()
+    private lateinit var binding: MainFragmentBinding
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        return inflater.inflate(R.layout.main_fragment, container, false)
-    }
+        binding = MainFragmentBinding.inflate(inflater, container, false)
+        binding.lifecycleOwner = viewLifecycleOwner
+        binding.viewModel = viewModel
 
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        viewModel = ViewModelProviders.of(this).get(MainViewModel::class.java)
-        // TODO: Use the ViewModel
+        // ボタンを押した時の動作設定
+        binding.button.setOnClickListener {
+            if (viewModel.scanning.value!!) {
+                viewModel.stopDeviceScan()
+            } else {
+                viewModel.startDeviceScan()
+            }
+        }
+
+        return binding.root
     }
 
 }
