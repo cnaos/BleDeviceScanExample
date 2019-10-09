@@ -53,7 +53,10 @@ class MainActivity : AppCompatActivity() {
 
         // パーミッションがあるか確認
         viewModel.isGrantedBLEPermission = isGrantedBlePermission()
+    }
 
+    override fun onResume() {
+        super.onResume()
         // 端末のBluetooth機能が有効になっているか確認
         requestEnableBluetoothFeature()
     }

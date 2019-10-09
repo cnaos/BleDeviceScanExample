@@ -28,9 +28,13 @@ class MainViewModel : ViewModel() {
     companion object {
         private val SCAN_PERIOD: Long =
             TimeUnit.MILLISECONDS.convert(20, TimeUnit.SECONDS)// スキャン時間
-        private val TAG = "MainViewModel"
-    }
 
+        private val TAG = "MainViewModel"
+
+        private val BLE_DEVICE_COMPARATOR =
+            compareBy<BluetoothDevice, String?>(nullsLast()) { it.name }
+                .thenBy { it.address }
+    }
 
     lateinit var bluetoothAdapter: BluetoothAdapter
 
@@ -43,6 +47,11 @@ class MainViewModel : ViewModel() {
     private var deviceScanJob: Job? = null
 
     private val scannedDeviceMap = ConcurrentHashMap<String, BluetoothDevice>()
+
+    /**
+     * 表示用のデバイスリスト
+     */
+    val bleDeviceDataList = MutableLiveData<List<BluetoothDevice>>(listOf<BluetoothDevice>())
 
 
     fun log(functionName: String, msg: String) =
@@ -128,6 +137,9 @@ class MainViewModel : ViewModel() {
             return
         }
         log(functionName, "scaned device=$device")
+
+        val tmpList = scannedDeviceMap.values.sortedWith(BLE_DEVICE_COMPARATOR)
+        bleDeviceDataList.postValue(tmpList)
     }
 
 

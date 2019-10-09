@@ -6,6 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
 import io.github.cnaos.example.bledevicescan.databinding.MainFragmentBinding
 
 class MainFragment : Fragment() {
@@ -35,6 +38,24 @@ class MainFragment : Fragment() {
         }
 
         return binding.root
+    }
+
+    override fun onActivityCreated(savedInstanceState: Bundle?) {
+        super.onActivityCreated(savedInstanceState)
+
+        val adapter = RecyclerViewListAdapter(context!!)
+
+        val recyclerView = binding.recyclerView
+        recyclerView.adapter = adapter
+
+        recyclerView.layoutManager = LinearLayoutManager(context!!)
+        val itemDecoration = DividerItemDecoration(context!!, DividerItemDecoration.VERTICAL)
+        recyclerView.addItemDecoration(itemDecoration)
+
+        viewModel.bleDeviceDataList.observe(viewLifecycleOwner, Observer {
+            adapter.submitList(it)
+        })
+
     }
 
 }
