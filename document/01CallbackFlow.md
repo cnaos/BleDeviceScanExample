@@ -94,8 +94,7 @@ fun deviceScanFlow(
         channel.close()
     }
 
-    // ブロックを抜けてしまうとFlowが閉じるので、
-    // 一定時間が経過して、delayでchannelがcloseされるか、外部からjobがキャンセルされるまで一時停止する
+    // callbackFlowのchannelが閉じるか、利用側でjobがキャンセルされた場合の処理
     awaitClose {
         log(functionName, "channel closed")
         scanner.stopScan(mLeScanCallback)
