@@ -26,51 +26,67 @@ import java.util.concurrent.TimeUnit
 class MainViewModel : ViewModel() {
     // 定数
     companion object {
+        // スキャン時間
         private val SCAN_PERIOD: Long =
-            TimeUnit.MILLISECONDS.convert(20, TimeUnit.SECONDS)// スキャン時間
+            TimeUnit.MILLISECONDS.convert(20, TimeUnit.SECONDS)
 
         private val TAG = "MainViewModel"
 
+        // BLEデバイスのソートに使う
+        // デバイス名(nullは最後)、デバイスのMACアドレスの順
         private val BLE_DEVICE_COMPARATOR =
             compareBy<BluetoothDevice, String?>(nullsLast()) { it.name }
                 .thenBy { it.address }
     }
 
+    // Activityから渡されたBluetoothAdapter
     lateinit var bluetoothAdapter: BluetoothAdapter
 
+    // BLE関係のRuntimePermissionの処理用(Peko)
     val permissionLiveData = PermissionsLiveData()
 
+    // ActivityでBLE関係のRuntimePermissionがあるかどうか設定される
     var isGrantedBLEPermission = false
 
-    val scanning = MutableLiveData<Boolean>(false)
-
+    // BLEデバイスのスキャンを行うJob
     private var deviceScanJob: Job? = null
 
+    // スキャンしたBLEデバイスを記録しておくMap
     private val scannedDeviceMap = ConcurrentHashMap<String, BluetoothDevice>()
 
-    /**
-     * 表示用のデバイスリスト
-     */
+    // BLEデバイスのスキャン状態の画面表示用
+    val scanning = MutableLiveData<Boolean>(false)
+
+    // 画面表示用のデバイスリスト
     val bleDeviceDataList = MutableLiveData<List<BluetoothDevice>>(listOf<BluetoothDevice>())
 
 
-    fun log(functionName: String, msg: String) =
+    /**
+     * ログ出力用のメソッド
+     */
+    fun log(functionName: String, msg: String = "") =
         Log.i(TAG, "[${Thread.currentThread().name}] $functionName $msg")
 
 
+    /**
+     * BLEデバイスのスキャン結果をFlowで取得する
+     */
     fun deviceScanFlow(
         scanner: BluetoothLeScanner
     ): Flow<ScanResult> = callbackFlow {
         val functionName = "deviceScanFlow()"
         val mLeScanCallback = object : ScanCallback() {
-            // スキャンに成功（アドバタイジングは一定間隔で常に発行されているため、本関数は一定間隔で呼ばれ続ける）
+            // BLEデバイスがスキャンされると呼ばれる。
             override fun onScanResult(callbackType: Int, result: ScanResult) {
                 if (channel.isClosedForSend) {
                     return
                 }
+                // callbackFlowのchannelにScanResultを送る
                 offer(result)
             }
         }
+
+        // BLEデバイスのスキャン処理開始
         scanner.startScan(mLeScanCallback)
 
         // 一定時間経過したらchannelをcloseするタイマーを仕掛ける
@@ -80,7 +96,8 @@ class MainViewModel : ViewModel() {
             channel.close()
         }
 
-        // Suspend until either onCompleted or external cancellation are invoked
+        // ブロックを抜けてしまうとFlowが閉じるので、
+        // 一定時間が経過して、delayでchannelがcloseされるか、外部からjobがキャンセルされるまで一時停止する
         awaitClose {
             log(functionName, "channel closed")
             scanner.stopScan(mLeScanCallback)
@@ -88,8 +105,11 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /**
+     * BLEデバイスのスキャンを開始する
+     */
     fun startDeviceScan() {
-        Log.i(TAG, "startDeviceScan")
+        log("startDeviceScan")
 
         if (!isGrantedBLEPermission) {
             permissionLiveData.checkPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -117,18 +137,26 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    /**
+     * BLEデバイスのスキャンを停止する
+     */
     fun stopDeviceScan() {
-        Log.i(TAG, "stopDeviceScan")
+        log("stopDeviceScan")
         scanning.postValue(false)
         cancelDeviceScanJob()
     }
 
+    /**
+     * BLEデバイスのスキャンJobをキャンセルする
+     */
     fun cancelDeviceScanJob() {
-        Log.i(TAG, "cancel deviceScanJob")
+        log("cancel deviceScanJob")
         deviceScanJob?.cancel()
     }
 
-
+    /**
+     * スキャンしたBLEデバイスを記録して、画面表示用のデバイスリストに反映する
+     */
     fun addDevice(device: BluetoothDevice?) {
         val functionName = "addDevice()"
         device ?: return
