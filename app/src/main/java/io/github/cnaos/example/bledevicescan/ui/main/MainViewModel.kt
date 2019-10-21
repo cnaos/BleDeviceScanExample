@@ -48,6 +48,8 @@ class MainViewModel : ViewModel() {
     // ActivityでBLE関係のRuntimePermissionがあるかどうか設定される
     var isGrantedBLEPermission = false
 
+    val isLocatoinEnabled = MutableLiveData<Boolean>(false)
+
     // BLEデバイスのスキャンを行うJob
     private var deviceScanJob: Job? = null
 

@@ -6,8 +6,10 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -16,13 +18,16 @@ import com.markodevcic.peko.PermissionResult
 import io.github.cnaos.example.bledevicescan.ui.main.MainFragment
 import io.github.cnaos.example.bledevicescan.ui.main.MainViewModel
 import org.jetbrains.anko.alert
+import org.jetbrains.anko.cancelButton
 import org.jetbrains.anko.okButton
 import org.jetbrains.anko.toast
+
 
 class MainActivity : AppCompatActivity() {
     // 定数
     companion object {
         private const val REQUEST_ENABLE_BLUETOOTH = 1 // Bluetooth機能の有効化要求時の識別コード
+        private const val REQUEST_ENABLE_LOCATION = 2 // 位置情報の有効化要求時の識別コード
         private const val TAG = "MainActivity"
     }
 
@@ -53,13 +58,18 @@ class MainActivity : AppCompatActivity() {
 
         // パーミッションがあるか確認
         viewModel.isGrantedBLEPermission = isGrantedBlePermission()
+
     }
 
     override fun onResume() {
         super.onResume()
         // 端末のBluetooth機能が有効になっているか確認
         requestEnableBluetoothFeature()
+        // 位置情報が有効になっているか確認
+        viewModel.isLocatoinEnabled.postValue(isLocationEnabled())
+        requestEnableLocationFeature()
     }
+
 
     override fun onPause() {
         super.onPause()
@@ -120,4 +130,41 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private fun requestEnableLocationFeature() {
+        if (isLocationEnabled()) {
+            return
+        }
+
+        alert("Bluetoothデバイスのスキャンを行うには位置情報を有効にしてください。") {
+            okButton {
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                startActivityForResult(intent, REQUEST_ENABLE_LOCATION)
+            }
+            cancelButton { }
+        }.show()
+    }
+
+    private fun isLocationEnabled(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            locationManager.isLocationEnabled
+        } else {
+            val locationMode =
+                Settings.Secure.getInt(contentResolver, Settings.Secure.LOCATION_MODE)
+            locationMode != Settings.Secure.LOCATION_MODE_OFF
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            REQUEST_ENABLE_LOCATION -> {
+                // 位置情報が有効になっているか確認
+                viewModel.isLocatoinEnabled.postValue(isLocationEnabled())
+            }
+            else -> {
+                // なにもしない
+            }
+        }
+    }
 }
